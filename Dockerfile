@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 WORKDIR /app
 COPY . .
-RUN pip install flask
+RUN pip install -r requirements.txt
+RUN chmod +x entrypoint.sh
 EXPOSE 5002
-CMD ["python", "app.py"]
+ENTRYPOINT ["./entrypoint.sh"]
