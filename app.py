@@ -32,10 +32,10 @@ def parse_ini():
             proxies.append(current)
     return proxies
 
-# 登录保护
+# 登录保护（修复跳过登录问题）
 @app.before_request
 def require_login():
-    if request.endpoint not in ("login", "static") and not session.get("logged_in"):
+    if request.endpoint and request.endpoint not in ("login", "static") and not session.get("logged_in"):
         return redirect(url_for("login"))
 
 # 登录页面
@@ -132,7 +132,6 @@ def change_password():
 
     return render_template("change_password.html")
 
-# 修改密码函数...
-
+# 启动 Flask 应用（保持运行）
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002)
