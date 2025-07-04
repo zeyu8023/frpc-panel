@@ -3,16 +3,18 @@ from dotenv import load_dotenv
 import subprocess
 import os
 
-load_dotenv()
+# 加载配置
+load_dotenv("/config/.env")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default-key")
 
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
-FRPC_INI = os.getenv("FRPC_INI")
-FRPC_CONTAINER = os.getenv("FRPC_CONTAINER")
+FRPC_INI = os.getenv("FRPC_INI", "/data/frpc.ini")
+FRPC_CONTAINER = os.getenv("FRPC_CONTAINER", "frpc")
 
+# 解析 frpc.ini
 def parse_ini():
     proxies = []
     current = {}
@@ -30,11 +32,13 @@ def parse_ini():
             proxies.append(current)
     return proxies
 
+# 登录保护
 @app.before_request
 def require_login():
     if request.endpoint not in ("login", "static") and not session.get("logged_in"):
         return redirect(url_for("login"))
 
+# 登录页面
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -44,16 +48,19 @@ def login():
         return render_template("login.html", error="用户名或密码错误")
     return render_template("login.html")
 
+# 登出
 @app.route("/logout")
 def logout():
     session.pop("logged_in", None)
     return redirect(url_for("login"))
 
+# 首页
 @app.route("/")
 def index():
     proxies = parse_ini()
     return render_template("index.html", proxies=proxies)
 
+# 添加规则
 @app.route("/add", methods=["POST"])
 def add():
     name = request.form["name"]
@@ -69,11 +76,7 @@ def add():
 
     return redirect(url_for("index"))
 
-@app.route("/restart")
-def restart():
-    subprocess.run(["docker", "restart", FRPC_CONTAINER])
-    return redirect(url_for("index"))
-
+# 删除规则
 @app.route("/delete/<name>")
 def delete(name):
     lines = open(FRPC_INI).readlines()
@@ -91,6 +94,16 @@ def delete(name):
         f.writelines(new_lines)
     return redirect(url_for("index"))
 
+# 重启 frpc 容器
+@app.route("/restart")
+def restart():
+    try:
+        subprocess.run(["docker", "restart", FRPC_CONTAINER], check=True)
+    except Exception as e:
+        return f"重启失败: {e}"
+    return redirect(url_for("index"))
+
+# 修改密码
 @app.route("/change-password", methods=["GET", "POST"])
 def change_password():
     if request.method == "POST":
@@ -106,9 +119,9 @@ def change_password():
             return render_template("change_password.html", error="新密码不能为空")
 
         # 修改 .env 文件
-        with open(".env", "r") as f:
+        with open("/config/.env", "r") as f:
             lines = f.readlines()
-        with open(".env", "w") as f:
+        with open("/config/.env", "w") as f:
             for line in lines:
                 if line.startswith("PASSWORD="):
                     f.write(f"PASSWORD={new}\n")
