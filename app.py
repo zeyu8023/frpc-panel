@@ -131,3 +131,8 @@ def change_password():
         return render_template("change_password.html", success="密码已修改，请重启容器以生效")
 
     return render_template("change_password.html")
+
+# 修改密码函数...
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5002)
