@@ -91,5 +91,30 @@ def delete(name):
         f.writelines(new_lines)
     return redirect(url_for("index"))
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002)
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+    if request.method == "POST":
+        old = request.form["old_password"]
+        new = request.form["new_password"]
+        confirm = request.form["confirm_password"]
+
+        if old != PASSWORD:
+            return render_template("change_password.html", error="原密码错误")
+        if new != confirm:
+            return render_template("change_password.html", error="两次输入的新密码不一致")
+        if not new.strip():
+            return render_template("change_password.html", error="新密码不能为空")
+
+        # 修改 .env 文件
+        with open(".env", "r") as f:
+            lines = f.readlines()
+        with open(".env", "w") as f:
+            for line in lines:
+                if line.startswith("PASSWORD="):
+                    f.write(f"PASSWORD={new}\n")
+                else:
+                    f.write(line)
+
+        return render_template("change_password.html", success="密码已修改，请重启容器以生效")
+
+    return render_template("change_password.html")
